@@ -32,7 +32,7 @@ def load_model():
 def add_predictions(df: pd.DataFrame) -> pd.DataFrame:
     enriched = df.copy()
     model = load_model()
-    enriched["predicted_peak_day"] = model.predict(get_model_features(enriched)).astype(int)
+    enriched["predicted_peak_condition"] = model.predict(get_model_features(enriched)).astype(int)
     enriched["pickup_decision"] = enriched.apply(get_pickup_decision, axis=1)
     enriched["approval_message"] = enriched.apply(get_approval_message, axis=1)
     return enriched
@@ -123,9 +123,12 @@ def render_tables(df: pd.DataFrame) -> None:
                 "overflow_risk",
                 "vehicle_assignment_status",
                 "pickup_decision",
-                "predicted_peak_day",
+                "predicted_peak_condition",
             ]
-        ].sort_values("timestamp", ascending=False).head(50),
+        ]
+        .sort_values("timestamp", ascending=False)
+        .drop_duplicates(subset=["bin_id"], keep="first")
+        .head(50),
         width="stretch",
     )
 

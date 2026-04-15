@@ -96,7 +96,6 @@ def get_model_features(df: pd.DataFrame) -> pd.DataFrame:
     return df[
         [
             "fill_level_percent",
-            "weight_kg",
             "travel_time",
             "route_efficiency",
             "battery_level_percent",
@@ -105,5 +104,10 @@ def get_model_features(df: pd.DataFrame) -> pd.DataFrame:
             "gas_level",
             "production_volume_index",
             "truck_available",
+            "lag_1",
+            "lag_2",
+            "rolling_mean_7",
+            "urban_density_factor",
+            "waste_generation_index",
         ]
     ]

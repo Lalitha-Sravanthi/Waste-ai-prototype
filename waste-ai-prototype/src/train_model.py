@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import joblib
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
 
 from src.config import MODEL_PATH, PROCESSED_DATASET_PATH, RAW_DATASET_PATH
 from src.features import add_business_features, get_model_features
@@ -18,21 +17,38 @@ def train_and_save_model() -> None:
     df = add_business_features(df)
     df.to_csv(PROCESSED_DATASET_PATH, index=False)
 
-    target = "derived_peak_day"
+    # Use the source dataset's peak label for a more stable target.
+    # The custom derived_peak_day label turns one entire day into class 1,
+    # which creates an unrealistic and unstable forecasting task.
+    target = "peak_flag"
     X = get_model_features(df)
     y = df[target]
+    unique_dates = sorted(df["date"].dropna().unique())
+    if len(unique_dates) < 2:
+        raise ValueError("Need at least 2 unique dates for time-based evaluation.")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y,
-    )
+    split_index = max(1, int(len(unique_dates) * 0.8))
+    if split_index >= len(unique_dates):
+        split_index = len(unique_dates) - 1
 
-    model = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=8,
+    train_dates = unique_dates[:split_index]
+    test_dates = unique_dates[split_index:]
+
+    train_mask = df["date"].isin(train_dates)
+    test_mask = df["date"].isin(test_dates)
+
+    X_train, X_test = X.loc[train_mask], X.loc[test_mask]
+    y_train, y_test = y.loc[train_mask], y.loc[test_mask]
+
+    print(f"Training on dates: {train_dates[0]} to {train_dates[-1]}")
+    print(f"Testing on dates: {test_dates[0]} to {test_dates[-1]}")
+    print(f"Training rows: {len(X_train)}")
+    print(f"Testing rows: {len(X_test)}")
+
+    model = GradientBoostingClassifier(
+        n_estimators=150,
+        learning_rate=0.08,
+        max_depth=3,
         random_state=42,
     )
     model.fit(X_train, y_train)
